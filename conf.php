@@ -5,7 +5,7 @@ Route::config(function($app) {
   $app->library('Pagination');
   $app->library('Identify');
   $app->library('Tablefy');
-  $app->library('Sesion');
+  $app->library('Session');
 
   $app->attr('root', dirname(__FILE__) . '/');
   $app->attr('librarys', $app->attr('root') . 'app/librarys/');

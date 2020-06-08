@@ -1,6 +1,6 @@
 <?php
 
-class Sesion {
+class Session {
 
   private static $instance = null;
   protected static $SESSION_AGE = 1800;
