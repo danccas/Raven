@@ -12,8 +12,8 @@ final Class Route {
   public $title = null;
   public $description;
   private static $instance;
-  private $current_route = array();
-  private $merge_route   = array();
+  public $current_route = array();
+  public $merge_route   = array();
   private $middlewares   = array();
   public $middleware = null;
 
@@ -45,6 +45,10 @@ final Class Route {
   static function hash($st) {
     return substr(md5($st), 0, 4);
   }
+  static function explict_error($err) {
+    var_dump($err);
+    exit;
+  }
   public function attr($key, $val = -1) {
     if($val === -1) {
       if(isset($this->configure[$key])) {
@@ -57,12 +61,26 @@ final Class Route {
     }
     return $this;
   }
-  public function import($file) {
+  public static function import($file, $params = null, $cb_before = null, $cb_after = null) {
+    $ce = static::g();
+    if(!file_exists($file)) {
+      $ce->explict_error('file does not exists: ' . $file);
+    }
+    if(!is_null($params) && is_array($params)) {
+      extract($params);
+    }
+    if(!is_null($cb_before) && is_callable($cb_before)) {
+      Closure::bind($cb_before, $ce)($ce);
+    }
     require_once($file);
+    if(!is_null($cb_after) && is_callable($cb_after)) {
+      Closure::bind($cb_after, $ce)($ce);
+    }
   }
   private function defaultConfig() {
     $this->attr('core', dirname(__FILE__) . '/');
     $this->attr('root', dirname(__FILE__) . '/../');
+    $this->attr('web', '/');
     $this->attr('librarys', $this->attr('root') . 'app/librarys/');
     $this->attr('controllers', $this->attr('root') . 'app/controllers/');
     $this->attr('views', $this->attr('root') . 'app/views/');
@@ -151,6 +169,7 @@ final Class Route {
     static::import($file);
     if(class_exists($name)) {
       if(method_exists($name, 'importRoute')) {
+        #echo "Importando " . $slug . " [OK]\n";
         static::g()->libs->$slug = $name::importRoute(static::g());
       }
     }
@@ -405,9 +424,9 @@ final Class Route {
     }
     return $html;
   }
-  public static function uri($path = null, $domain = null, $sub = null, $get = null) {
+  public static function uri($path = null, $get = null) {
     $r = '';
-    if(is_null($sub)) {
+    /* if(is_null($sub)) {
       if(is_null($domain)) {
         $r .= '';
       } else {
@@ -419,7 +438,7 @@ final Class Route {
       if($sub != SUBDOMINIO_ACTUAL || $domain != DOMINIO_ACTUAL) {
         $r .= '//' . $sub . '.' . $domain;
       }
-    }
+    }*/
     $r .= is_null($path) ? static::web('raiz_metodo') : $path;
     if(!is_null($get)) {
       $clear = strpos($get, '?') === 0;
@@ -439,27 +458,10 @@ final Class Route {
     return $r;
   }
   public static function controller($file, $params = null) {
-    if(strpos($file, '/') === false) {
-      if(!empty(Route::getInstance()->web['controlador'])) {
-        $file = dirname(Route::getInstance()->web['controlador']) . '/' . $file . '.php';
-      } else {
-        $file = defined('CONTROLLERS') ? CONTROLLERS . $file . '.php' : $file;
-      }
-    }
-    if(!file_exists($file))  {
-      _404('controlador-no-existe: ' . $file);
-    }
-    Route::getInstance()->web['raiz_controlador'] = '/' . implode('/', Route::getInstance()->route['tree']) . '/';
-    if(!is_null($params)) {
-      if(is_array($params)) {
-        extract($params);
-      } else {
-        echo "no-es-array:" . $file;
-        var_dump($params);
-        exit;
-      }
-    }
-    require($file);
+    $file = strpos($file, '.php') === false ? static::g()->attr('controllers') . $file . '.php' : $file;
+    static::import($file, $params, function() {
+      $this->web['raiz_controlador'] = '/' . implode('/', $this->route['tree']) . '/';
+    });
     exit;
   }
   public static function theme($file, $params = null) {
@@ -482,7 +484,7 @@ final Class Route {
     require($file);
   }
   static function render($x) {
-    if(!ES_POPY) {
+    if(!static::requestByPopy()) {
       $x->renderInPage();
       exit;
     } else {
@@ -505,7 +507,7 @@ final Class Route {
     $key = static::$passVarNam . static::hash($a);
     $b = array(
       'nombre'   => trim($a, '&'),
-      'link'     => is_callable($b) ? static::uri(Route::web('raiz_metodo'), DOMINIO_ACTUAL, SUBDOMINIO_ACTUAL, $key . '=' . $slug) : $b,
+      'link'     => is_callable($b) ? static::uri(Route::web('raiz_metodo'), $key . '=' . $slug) : $b,
       'popy'     => (substr($a, -1) === '&'),
       'callback' => is_callable($b) ? $b : null,
     );
@@ -614,7 +616,7 @@ final Class Route {
     $r = '';
     if (!empty(static::data('extra-css'))) {
       foreach (static::data('extra-css') as $css) {
-        $archivo = defined('RAIZ_WEB') && strpos($css, RAIZ_WEB) === 0 ? $css : RAIZ_WEB . "css/" . $css;
+        $archivo = strpos($css, '/') === 0 ? $css : static::g()->attr('web') . "css/" . $css;
         $r .= "<link href=\"" . $archivo . "\" media=\"screen\" rel=\"Stylesheet\" type=\"text/css\" />\n";
       }
     }
@@ -706,6 +708,7 @@ final Class Route {
     }
   }
   static function Redirect($e = null) {
+    $e = is_null($e) ? '/' : $e;
     if(static::requestByPopy()) {
       echo 'popy-location ' . $e;
       exit;

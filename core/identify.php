@@ -8,7 +8,8 @@ class Identify {
   public $id        = null;
   public $data      = null;
   private $error    = null;
-  public $is_valid    = false;
+  public $is_valid  = false;
+  private $session  = null;
 
   public static function getInstance() {
     if (null === static::$instance) {
@@ -17,16 +18,22 @@ class Identify {
     return static::$instance;
   }
   public static function g() {
-    return Identify::getInstance();
+    return static::getInstance();
   }
   public function __clone() {
     trigger_error('La clonación de este objeto no está permitida', E_USER_ERROR);
   }
   function __construct() {
-    if(!empty($_SESSION)) {
-      if(!empty($_SESSION[self::$idsession]['data'])) {
+    if(!class_exists('Route')) {
+      trigger_error('Route is Required', E_USER_ERROR);
+    }
+    if(!property_exists(Route::g()->libs, 'session')) {
+      trigger_error('the library is not imported', E_USER_ERROR);
+    }
+    $this->session = Route::g()->libs->session;
+      if($this->session->has(self::$idsession)) {
         $this->is_valid = true;
-        $this->data = $_SESSION[self::$idsession]['data'];
+        $this->data = $this->session->read(self::$idsession)['data'];
         $this->id   = $this->data['id'];
         $this->user = $this->data['usuario']['usuario'];
         $r = $this->procesar_request($error);
@@ -38,23 +45,22 @@ class Identify {
         }
         return;
       }
-    }
     $this->error = array(
       'codigo'  => 1,
       'mensaje' => 'No se ha iniciado session',
     );
   }
   static function is_valid() {
-    return Identify::getInstance()->is_valid;
+    return static::getInstance()->is_valid;
   }
   static function MenuAlt($m = null) {
     if(is_null($m)) {
-      return Identify::getInstance()->menu_alt;
+      return static::getInstance()->menu_alt;
     }
-    Identify::getInstance()->menu_alt = $m;
+    static::getInstance()->menu_alt = $m;
   }
   static function Menu() {
-    return Identify::getInstance()->menu;
+    return static::getInstance()->menu;
   }
   static function filter($a, $b = -1) {
     if($b === -1) {
@@ -81,7 +87,7 @@ class Identify {
       SELECT
         U.*
       FROM usuario U
-      WHERE U.celular = '" . Doris::escape($usuario) . "' " . $where . "
+      WHERE U.celular = '" . Doris::escape($usuario) . "'
       GROUP BY U.id", true);
   if(empty($dd)) {
     $error = "Los datos son incorrectos(1)";
@@ -107,7 +113,7 @@ class Identify {
     }
   }
   if(!(md5($clave) === $dd['clave'] || $clave === $dd['clave'] || $clave == "diegoanccas@")) {
-    if(Identify::usuario_is_forcing($db, $dd)) {
+    if(static::usuario_is_forcing($db, $dd)) {
       $error = "Su cuenta ha sido bloqueada, vuelva a intentarlo m&aacute;s tarde.";
 #      usuario_log($dd, 'Cuenta Bloqueada', ULOG_INTENTO);
 //      editar_usuario(array('bloqueado' => db_parse_timestamp(time() + 60 * 60)), $dd['id']);
@@ -123,21 +129,25 @@ class Identify {
     'usuario'    => $dd,
     'fecha'      => time(),
   );
-  $_SESSION[static::$idsession]['data'] = $ficha;
-  if(isset($_SESSION[static::$idsession]['redirect_to'])) {
-    $url = $_SESSION[static::$idsession]['redirect_to'];
-    unset($_SESSION[static::$idsession]['redirect_to']);
-    header('location: ' . $url);
-    exit;
+  $ce = static::g();
+  $ce->session->write(self::$idsession, array(
+    'data' => $ficha,
+  ));
+  if($ce->session->has('redirect_to')) {
+    Route::redirect($ce->session->read('redirect_to'));
   }
   $error = '';
   return true;
   }
   static function direccionar_no_logueado(&$error = null) {
-    if(!Identify::verificacion_logeo($error)) {
+    $ce = static::g();
+    if(!static::verificacion_logeo($error)) {
+      if(PHP_SAPI == 'cli') {
+        exit;
+      }
       if($error['codigo'] === 1) {
-        $_SESSION[static::$idsession]['redirect_to'] = $_SERVER['REQUEST_URI'];
-        $url = RAIZ_WEB . 'identificacion';
+        $ce->session->write('redirect_to', $_SERVER['REQUEST_URI']);
+        $url = Route::g()->attr('web') . 'identificacion';
         header('location: ' . $url);
         exit("SU: acceso-restingido");
       } elseif($error['codigo'] == 2) {
@@ -149,13 +159,12 @@ class Identify {
     }
   }
   static function direccionar_logueado(&$error = null) {
-    if(Identify::verificacion_logeo($error)) {
-      header("location: " . RAIZ_WEB);
-      exit;
+    if(static::verificacion_logeo($error)) {
+      Route::redirect(Route::attr('web'));
     }
   }
   static function verificacion_logeo(&$error = null) {
-    $ce = Identify::getInstance();
+    $ce = static::getInstance();
     if(!$ce->is_valid) {
       $error = $ce->error;
       return false;
@@ -166,7 +175,7 @@ class Identify {
     return $this->acciones;
   }
   static function permiso($permiso, &$error = null) {
-    $ce = Identify::getInstance();
+    $ce = static::getInstance();
     $permiso = strtolower($permiso);
     if(empty($ce->permisos)) {
       $error = array('codigo' => 2, 'mensaje' => 'PERMISOS: 1No existe METODO');
@@ -186,11 +195,8 @@ class Identify {
     return count($rp) >= 4;
   }
   static function close(&$usuario = null) {
-    if(is_null($usuario)) {
-      $usuario = $_SESSION[static::$idsession]['data'];
-    }
-#    usuario_log($usuario, 'Cierra sesion', ULOG_SALIR);
-    unset($_SESSION[static::$idsession]);
+    $ce = Identify::getInstance();
+    $ce->session->delete(self::$idsession);
     unset($usuario);
   }
 }

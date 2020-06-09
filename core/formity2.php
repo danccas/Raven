@@ -405,7 +405,7 @@ class Formity {
     $attrs['data-base'] = Route::uri(null, null, null, '');
     if(!empty($this->url)) {
       $attrs['action'] = $this->url;
-    } elseif(!ES_POPY) {
+    } elseif(!Route::requestByPopy()) {
       $attrs['action'] = '#' . $this->id;
     }
 //    if(!empty($url)) {

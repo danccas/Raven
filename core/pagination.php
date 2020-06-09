@@ -103,7 +103,7 @@ class Pagination {
     if(empty($this->number_results) || $this->number_pages == 1) {
       return '';
     }
-    $link = !is_null($this->link) ? $this->link : Route::uri(null, DOMINIO_ACTUAL, SUBDOMINIO_ACTUAL, $this->vkey . '=$p1');
+    $link = !is_null($this->link) ? $this->link : Route::uri(null, $this->vkey . '=$p1');
     $link_anterior  = str_replace("\$p1", ($this->page - 1), $link);
     $link_siguiente = str_replace("\$p1", ($this->page + 1), $link);
 

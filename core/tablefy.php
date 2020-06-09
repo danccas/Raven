@@ -75,7 +75,7 @@ class Tablefy {
     }
   }
   public function getLink() {
-    return Route::uri(null, null, null, 'tfweb' . $this->index . '=' . $this->uniqueId);
+    return Route::uri(null, 'tfweb' . $this->index . '=' . $this->uniqueId);
   }
   public function setTitle($t) {
     $this->title = $t;
@@ -100,7 +100,7 @@ class Tablefy {
         return $row[$n['id']];
       }, $ruta, -1, $cantidad);
     }
-    $rp = Route::uri($ruta, DOMINIO_ACTUAL, SUBDOMINIO_ACTUAL, $get);
+    $rp = Route::uri($ruta, $get);
     return $rp;
   }
   public function setFilter($f) {
@@ -504,7 +504,7 @@ class Tablefy {
     $rp .= '</div></div></div></div>';
     $VISTA_HTML = $rp;
     unset($rp);
-    require_once(VIEWS . 'internal.php');
+    require_once(Route::g()->attr('views') . 'internal.php');
     exit;
   }
   public function render($attr = null) {
