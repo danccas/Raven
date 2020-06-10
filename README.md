@@ -1,39 +1,218 @@
-![alt text](https://repository-images.githubusercontent.com/270174093/55990680-a855-11ea-9105-fd78807695d9)
+![alt text](https://repository-images.githubusercontent.com/270174093/5cdf3f00-aaf7-11ea-8928-98f8afd5ca52)
 
-## Welcome to GitHub Pages
+## About Raven
 
-You can use the [editor on GitHub](https://github.com/danccas/Raven/edit/master/README.md) to maintain and preview the content for your website in Markdown files.
+Raven Framework is a High-Performance PHP framework with expressive, elegant syntax. Designed to be fast, easy to use (and learn) and highly scalable.
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
 
-### Markdown
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
 
-```markdown
-Syntax highlighted code block
+### Installation
 
-# Header 1
-## Header 2
-### Header 3
+1\. Download the files.
+It's recommended that you use git to install Raven.
 
-- Bulleted
-- List
+$ git clone git@github.com:danccas/Raven.git
 
-1. Numbered
-2. List
+This will install Raven, requires PHP 7.1 or newer.
 
-**Bold** and _Italic_ and `Code` text
+2\. Configure your webserver.
 
-[Link](url) and ![Image](src)
+For *Apache*, edit your `.htaccess` file with the following:
+
+```
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]
 ```
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
+**Note**: If you need to use flight in a subdirectory add the line `RewriteBase /subdir/` just after `RewriteEngine On`.
 
-### Jekyll Themes
+For *Nginx*, add the following to your server declaration:
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/danccas/Raven/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
+```
+server {
+    location / {
+        try_files $uri $uri/ /index.php;
+    }
+}
+```
 
-### Support or Contact
+### Features
+- Web Applications using MVC pattern
+- Routing system and basic Middleware support. (PHP-Router)
+- Basic Logger
+- Request Validation
+- Html/Form Builder
+- and more...
 
-Having trouble with Pages? Check out our [documentation](https://help.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
+## Server requirements
+- PHP >= 7.1
+- OpenSSL PHP Extension
+- PDO PHP Extension
+- JSON PHP Extension
+
+# Routing
+
+Routing in Raven is done by matching a URL pattern with a callback function.
+
+```php
+Route::any('/', function(){
+    echo 'hello world!';
+});
+```
+
+The callback can be any object that is callable. So you can use a regular function:
+
+```php
+function hello(){
+    echo 'hello world!';
+}
+
+Route::any('/', 'hello');
+```
+
+Or a class method:
+
+```php
+class Awakening {
+    public static function hello() {
+        echo 'hello world!';
+    }
+}
+
+Route::any('/', array('Awakening', 'hello'));
+```
+
+Or an object method:
+
+```php
+class Awakening
+{
+    public function __construct() {
+        $this->name = 'John Doe';
+    }
+
+    public function hello() {
+        echo "Hello, {$this->name}!";
+    }
+}
+
+$Awakening = new Awakening();
+
+Route::any('/', array($Awakening, 'hello')); 
+```
+
+Routes are matched in the order they are defined. The first route to match a
+request will be invoked.
+
+## Method Routing
+
+By default, route patterns are matched against all request methods. You can respond
+to specific methods by placing an identifier before the URL.
+
+```php
+Route::get('/', function(){
+    echo 'I received a GET request.';
+});
+
+Route::post('/', function(){
+    echo 'I received a POST request.';
+});
+```
+
+You can also map multiple methods to a single callback by using a `|` delimiter:
+
+```php
+Route::any('/', function(){
+    echo 'I received either any request.';
+});
+```
+
+## Regular Expressions
+
+You can use regular expressions in your routes:
+
+```php
+Route::any('/user/:id', array('id' => '[0-9]+'), function(){
+    // This will match /user/1234
+});
+```
+
+## Named Parameters
+
+You can specify named parameters in your routes which will be passed along to
+your callback function.
+
+```php
+Route::any('/:name/:id', array('name' => '[\w]+', 'id' => '[0-9]+'), function(){
+    echo "hello, {$this->route['name']} ({$this->route['id']})!";
+});
+```
+
+
+## Optional Parameters
+
+You can specify named parameters that are optional for matching by wrapping
+segments in parentheses.
+
+```php
+Route::any('/blog(/:year(/:month(/:day)?)?)?', function(){
+    // $this->route
+    // This will match the following URLS:
+    // /blog/2012/12/10
+    // /blog/2012/12
+    // /blog/2012
+    // /blog
+});
+```
+
+Any optional parameters that are not matched will be passed in as NULL.
+
+## Wildcards
+
+Matching is only done on individual URL segments. If you want to match multiple
+segments you can use the `*` wildcard.
+
+```php
+Route::path('/blog/', function(){
+    // This will match /blog/2000/02/01
+});
+```
+
+# Overriding
+
+Route allows you to override its default functionality to suit your own needs,
+without having to modify any code.
+
+For example, when Route cannot match a URL to a route, it invokes the `notFound`
+method which sends a generic `HTTP 404` response. You can override this behavior
+by using the `else` method:
+
+```php
+Route::else(function(){
+    // Display custom 404 page
+    Route::view('errors/404.html');
+});
+```
+
+# Framework Instance
+
+Instead of running Route as a global static class, you can optionally run it
+as an object instance.
+
+```php
+require 'core/route.php';
+
+$app = Route::g()->init();
+
+$app->any('/', function(){
+    echo 'hello world!';
+});
+
+```
+
+So instead of calling the static method, you would call the instance method with
+the same name on the Engine object.
