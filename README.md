@@ -1,5 +1,4 @@
-![alt text](https://repository-images.githubusercontent.com/270174093/5cdf3f00-aaf7-11ea-8928-98f8afd5ca52)
-
+<p align="center"><img src="https://repository-images.githubusercontent.com/270174093/5cdf3f00-aaf7-11ea-8928-98f8afd5ca52" width="400"></p>
 ## About Raven
 
 Raven Framework is a High-Performance PHP framework with expressive, elegant syntax. Designed to be fast, easy to use (and learn) and highly scalable.
