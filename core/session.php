@@ -3,18 +3,6 @@ class Session {
   private static $instance = null;
   protected static $SESSION_AGE = 1800;
 
-  public static function importRoute($route) {
-    return static::getInstance();
-  }
-  public static function g() {
-    return static::getInstance();
-  }
-  public static function getInstance() {
-    if (null === static::$instance) {
-      static::$instance = new static();
-    }
-    return static::$instance;
-  }
   function __construct() {
     if (static::$instance === null) {
       static::$instance = $this;
